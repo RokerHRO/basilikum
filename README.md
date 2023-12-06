@@ -9,7 +9,7 @@ There are 95 printable ASCII characters. If we map all other byte values to one 
 
 To make things a bit more complicated I also added a little quirk to the codec: A 64 bit "secret" which scrambles the encoding a bit and without knowing this secret it is not so easy (albeit not impossible) to decode the data.
 
-The name "base-96-to-base-62" would be too long, so I chose the shorter name "basilikum", which just means basil (''Ocimum basilicum'') in German.
+The name "base-96-to-base-62" would be too long, so I chose the shorter name "basilikum", which just means basil (_Ocimum basilicum_) in German.
 
 ## Example data
 
