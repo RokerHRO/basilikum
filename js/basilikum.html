@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="date" content="2025-02-21">
+<meta name="author" content="Lars H. Rohwedder">
+<link rel="stylesheet" type="text/css" href="ow.css">
+<title>Basilikum Encoder/Decoder via JavaScript</title>
+<script src="basilikum.js" type="text/javascript"></script>
+</head>
+<body>
+<blockquote>
+<h2>Basilikum Encoder</h2>
+<form id="f">
+<table id="t" class="bigtable">
+<tr><td colspan="4">Quirk: <input type="number" id="enc_quirk"></input>&nbsp;<button>Random!</button></td></tr>
+<tr><th colspan="4"></th></tr>
+<tr><th>&nbsp;</th><th>Name</th><th>Value</th><th></th></tr>
+<tr id="r1">
+	<td id="d1" align="right">1</td>
+	<td id="d1n"><input type="text"></input></td>
+	<td id="d1v"><input type="text"></input></td>
+	<td id="d1b"><button>+</button>&nbsp;<button>&minus;</button></td>
+</tr>
+<tr><td colspan="4"><button>Encode!</button></td></tr>
+<tr><td colspan="5">Result:<br><div id="out" style="font-family:monospace;">ewrtjmfgdew</div></td></tr>
+<tr><td colspan="5">Basilikum:<br><div id="out_b" style="font-family:monospace;">ewrtjmfgdew</div></td></tr>
+</table>
+</form>&nbsp;
+</blockquote>
+
+<blockquote>
+<h2>Basilikum Decoder</h2>
+<form id="form_dec">
+<table id="tdec" class="bigtable">
+<tr><td colspan="4">Quirk: <input type="number" id="dec_quirk"></input>&nbsp;<button>Random!</button></td></tr>
+<tr><td colspan="4"><textarea id="dec_in" cols="80" rows="5"></textarea></td></tr>
+<tr><td colspan="4"><button>Decode!</button></td></tr>
+</table>&nbsp;
+</blockquote>
+</body>
+</html>

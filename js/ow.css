@@ -1,0 +1,107 @@
+body { background-color:#bdd;
+	counter-reset:ee_1 -1;
+	font-family:Helvetica,Sans-Serif,Arial;
+	}
+h2:before {
+	content: counter(ee_1) ".\00a0";
+	counter-increment: ee_1;
+	}
+
+h2 { counter-reset: ee_2; }
+
+h3:before {
+	content: counter(ee_1) "." counter(ee_2) ".\00a0";
+	counter-increment: ee_2;
+}
+
+h3 { counter-reset: ee_3; }
+h4:before {
+	content: counter(ee_1) "." counter(ee_2) "." counter(ee_3) ".\00a0";
+	counter-increment: ee_3;
+}
+
+dt { font-weight:bold; }
+
+.inv {border:0px; background-color:#cdd;}
+
+table,tr,th,td {
+	border:1px black solid; border-collapse:collapse;
+}
+
+textarea {
+	font-family:Monospace, Courier-New;
+}
+
+tr,th,td {
+	margin:5px; padding:5px;vertical-align:top;
+	}
+
+.bigtable {
+	background-color:#ccc;
+	box-shadow: 8px 8px 16px #555;
+	}
+
+
+.spacetable
+	{
+	margin:5px; padding:5px; border:0px none;
+	}
+
+.spacetable tr, .spacetable td { margin:5px; border:0; padding:0px; padding-right:1em;}
+
+.box { background-color:#eca;
+	padding:1em;
+	border:2px black solid;
+	font-style:italic;
+}
+
+.console {
+	background-color:black;color:#6c6;margin:10px;padding:5px;
+	}
+
+blockquote {
+	text-align:centered;
+	font-size:75%;
+	border:1px black solid;
+	background-color:#eee;
+	margin:1em;
+	padding-top:0.25em;
+	padding-bottom:0.25em;
+	padding-left:1em;
+	}
+
+.enabled { color:#000; }
+.disabled { color:#777; }
+
+.drops {
+	-webkit-filter: drop-shadow(8px 8px 10px rgba(0,0,0,0.9));
+	filter: drop-shadow(8px 8px 10px rgba(0,0,0,0.9));
+}
+
+
+/* show/hide on click via CSS only: */
+.collapse{
+  cursor: pointer;
+  display: block;
+  text-align:right;
+}
+
+.collapse + input{
+  display: none; /* hide the checkboxes */
+}
+
+.collapse + input + div{
+  display:none;
+}
+
+.collapse + input:checked + div{
+  display:block;
+}
+
+.collapse + input + table{
+  display:none;
+}
+
+.collapse + input:checked + table{
+  display:block;
+}
