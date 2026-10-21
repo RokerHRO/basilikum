@@ -20,3 +20,5 @@ The name "base-96-to-base-62" would be too long, so I chose the shorter name "ba
 | foo=123&bar=X:Y&yuk=Yabba+Yabba | 12345 | P7FsANV90scozdg8iu9uRjCeB4oLEneHpZb |
 | foo=123&bar=X:Y&yuk=Yabba+Yabba | 54321 | ViNp9oDHleLtrYCKEmO8gDCmOrvH9OR0dya |
 | fo=123&bar=X:Y&yuk=Yabba+Yabba | 54321 | Re6RmNgo2dUz8cEEFx23K233eLdjzdCeKb |
+
+You can test it online with the  <a href="js/index.html">AI-generated JavaScript version of this algorithm</a>.

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>basilikum - base62 codec (JavaScript)</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1 { font-size: 1.6rem; }
+  h1 small { font-weight: normal; font-size: .75em; }
+  h2 { font-size: 1.15rem; margin-top: 2rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  textarea, input[type=text] { width: 100%; box-sizing: border-box; font-family: ui-monospace, Consolas, monospace; font-size: .95rem; padding: .5rem; margin-top: .3rem; border-radius: 4px; border: 1px solid #8884; }
+  .row { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+  button { padding: .45rem .9rem; cursor: pointer; border-radius: 4px; border: 1px solid #8886; background: #8881; }
+  button:hover { background: #8882; }
+  button.active { background: #4a7; color: #fff; border-color: #4a7; }
+  #encStatus, #decStatus, #teststatus { margin-top: .8rem; min-height: 1.3em; font-size: .9rem; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: #2a2; } .err { color: #c22; } .warn { color: #b70; }
+  .examples { font-size: .9rem; }
+  .examples button { font-size: .8rem; padding: .25rem .6rem; margin-right: .4rem; }
+  code { background: #8882; padding: 0 .3em; border-radius: 3px; font-size: .9em; }
+  footer { margin-top: 2rem; font-size: .8rem; opacity: .7; }
+
+  .kvrow { display: flex; align-items: center; gap: .4rem; margin-top: .4rem; }
+  .kvrow input { box-sizing: border-box; font-family: ui-monospace, Consolas, monospace; font-size: .95rem; padding: .4rem .5rem; border-radius: 4px; border: 1px solid #8884; }
+  .kvrow .kvkey { width: 38%; }
+  .kvrow .kvval { flex: 1; }
+  .kvrow .eq { opacity: .55; font-family: ui-monospace, monospace; }
+  .kvrow .kvdel { flex: none; padding: .2rem .6rem; }
+  #btnAddRow { margin-top: .6rem; }
+  .kvtab { border-collapse: collapse; margin-top: .4rem; font-size: .9rem; }
+  .kvtab th, .kvtab td { border: 1px solid #8884; padding: .35rem .5rem; text-align: left; font-family: ui-monospace, Consolas, monospace; word-break: break-all; }
+  .kvtab th { background: #8882; }
+</style>
+</head>
+<body>
+<h1>basilikum <small>base96 &rarr; base62 codec for printable ASCII texts</small></h1>
+<p>JavaScript port of <code>basilikum.c</code>. Key-value pairs are URL-encoded into a query string, which is then encoded; when decoding, a valid query string is split back into key-value pairs.</p>
+
+<form id="form" onsubmit="return false">
+  <label for="secret">Secret (unsigned 64-bit, decimal)
+    <input id="secret" type="text" value="12345" spellcheck="false">
+  </label>
+
+  <div class="row">
+    <button id="btnEncode" type="button" class="active">Encode &rarr;</button>
+    <button id="btnDecode" type="button">&larr; Decode</button>
+  </div>
+
+  <!-- ENCODE mode -->
+  <div id="encMode">
+    <label>Key-Value Pairs (input)</label>
+    <div id="kvRows"></div>
+    <button id="btnAddRow" type="button">+ Add key-value pair</button>
+
+    <label for="encIn">Query string (URL-encoded, automatic)</label>
+    <textarea id="encIn" rows="2" readonly spellcheck="false"></textarea>
+
+    <label for="encOut">Encoded (base62)</label>
+    <textarea id="encOut" rows="3" readonly spellcheck="false"></textarea>
+
+    <div id="encStatus"></div>
+  </div>
+
+  <!-- DECODE mode -->
+  <div id="decMode" style="display:none">
+    <label for="decIn">Encoded (base62, input)</label>
+    <textarea id="decIn" rows="3" spellcheck="false"></textarea>
+
+    <label for="decRaw">Decoded (query string)</label>
+    <textarea id="decRaw" rows="3" readonly spellcheck="false"></textarea>
+
+    <label>Key-Value Pairs (if a valid query string)</label>
+    <div id="decKv"></div>
+
+    <div id="decStatus"></div>
+  </div>
+</form>
+
+<p class="examples">Presets (KV input + secret, encode mode):
+  <button type="button" data-preset="0">URL parameters</button>
+  <button type="button" data-preset="1">Simple</button>
+  <button type="button" data-preset="2">Empty value</button>
+</p>
+
+<h2>Reference test</h2>
+<p>42 curated vectors from the real C build (covering all code paths): 29 round-trip vectors in <code>basilikum_roundtrip_vectors.js</code> and 13 decoder robustness vectors in <code>basilikum_decode_vectors.js</code>.</p>
+<div class="row">
+  <button id="btnTest" type="button">Run test (42 vectors)</button>
+</div>
+<div id="teststatus"></div>
+
+<footer>Open in a browser: <code>basilikum.html</code> loads <code>basilikum.js</code>, <code>basilikum_roundtrip_vectors.js</code> + <code>basilikum_decode_vectors.js</code> (file://).</footer>
+
+<script src="basilikum.js"></script>
+<script src="basilikum_roundtrip_vectors.js"></script>
+<script src="basilikum_decode_vectors.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const secret = $('secret');
+  const kvRows = $('kvRows');
+  let mode = 'encode';
+
+  // ---------- Key-Value editor (encode input) ----------
+
+  function addKvRow(key, value) {
+    const row = document.createElement('div');
+    row.className = 'kvrow';
+
+    const k = document.createElement('input');
+    k.className = 'kvkey'; k.value = key || ''; k.spellcheck = false; k.placeholder = 'key';
+    const eq = document.createElement('span');
+    eq.className = 'eq'; eq.textContent = '=';
+    const v = document.createElement('input');
+    v.className = 'kvval'; v.value = value || ''; v.spellcheck = false; v.placeholder = 'value';
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'kvdel'; del.textContent = '\u2212'; del.title = 'Delete row';
+
+    k.oninput = updateEncode;
+    v.oninput = updateEncode;
+    del.onclick = () => { row.remove(); updateEncode(); };
+
+    row.appendChild(k);
+    row.appendChild(eq);
+    row.appendChild(v);
+    row.appendChild(del);
+    kvRows.appendChild(row);
+    return row;
+  }
+
+  function clearKvRows() { kvRows.innerHTML = ''; }
+
+  // Key-value pairs -> URL-encoded query string (input for basilikum_encode)
+  function buildQueryString() {
+    const parts = [];
+    kvRows.querySelectorAll('.kvrow').forEach(row => {
+      const k = row.querySelector('.kvkey').value;
+      const v = row.querySelector('.kvval').value;
+      if (k === '' && v === '') return;
+      parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+    });
+    return parts.join('&');
+  }
+
+  function updateEncode() {
+    const qs = buildQueryString();
+    $('encIn').value = qs;
+    const sec = secret.value;
+    if (!sec.trim()) { $('encOut').value = ''; $('encStatus').textContent = 'Secret is empty'; $('encStatus').className = 'warn'; return; }
+    try {
+      const enc = basilikum.encode(qs, sec);
+      $('encOut').value = enc;
+      const rt = basilikum.decode(enc, sec);
+      if (rt === qs) { $('encStatus').textContent = 'Round-trip OK (decode(encode(x)) === x)'; $('encStatus').className = 'ok'; }
+      else { $('encStatus').textContent = 'Round-trip mismatch: decode(encode(x)) !== x'; $('encStatus').className = 'warn'; }
+    } catch (e) {
+      $('encOut').value = '';
+      $('encStatus').textContent = 'Error: ' + e.message;
+      $('encStatus').className = 'err';
+    }
+  }
+
+  // ---------- Decode mode ----------
+
+  // Splits a query string into key-value pairs; valid=false if not possible.
+  function parseQueryString(s) {
+    if (s === '') return { valid: true, pairs: [] };
+    const segs = s.split('&').filter(x => x !== '');
+    if (segs.length === 0) return { valid: true, pairs: [] };
+    const pairs = [];
+    for (const seg of segs) {
+      const idx = seg.indexOf('=');
+      if (idx === -1) return { valid: false, pairs: [] };
+      let k, v;
+      try {
+        k = decodeURIComponent(seg.slice(0, idx));
+        v = decodeURIComponent(seg.slice(idx + 1));
+      } catch (e) {
+        return { valid: false, pairs: [] };
+      }
+      pairs.push([k, v]);
+    }
+    return { valid: true, pairs: pairs };
+  }
+
+  function renderDecKv(pairs) {
+    const box = $('decKv');
+    box.innerHTML = '';
+    if (!pairs.length) return;
+    const table = document.createElement('table');
+    table.className = 'kvtab';
+    const htr = document.createElement('tr');
+    const h1 = document.createElement('th'); h1.textContent = 'Key';
+    const h2 = document.createElement('th'); h2.textContent = 'Value';
+    htr.appendChild(h1); htr.appendChild(h2);
+    table.appendChild(htr);
+    for (const p of pairs) {
+      const tr = document.createElement('tr');
+      const td1 = document.createElement('td'); td1.textContent = p[0];
+      const td2 = document.createElement('td'); td2.textContent = p[1];
+      tr.appendChild(td1); tr.appendChild(td2);
+      table.appendChild(tr);
+    }
+    box.appendChild(table);
+  }
+
+  function updateDecode() {
+    const box = $('decKv');
+    box.innerHTML = '';
+    const sec = secret.value;
+    if (!sec.trim()) { $('decRaw').value = ''; $('decStatus').textContent = 'Secret is empty'; $('decStatus').className = 'warn'; return; }
+    try {
+      const raw = basilikum.decode($('decIn').value, sec);
+      $('decRaw').value = raw;
+      const q = parseQueryString(raw);
+      let msg, cls;
+      if (q.valid) {
+        renderDecKv(q.pairs);
+        msg = q.pairs.length
+          ? 'Valid query string: ' + q.pairs.length + ' pair(s)'
+          : 'Empty query string (0 pairs)';
+        cls = 'ok';
+      } else {
+        msg = 'Decoded text is not a valid query string (expected: key=value&key=value)';
+        cls = 'warn';
+      }
+      const skipped = ($('decIn').value.match(/[^a-zA-Z0-9-]/g) || []).length;
+      if (skipped > 0) {
+        msg = 'Note: ' + skipped + ' invalid character(s) skipped (intended behavior, matches C). ' + msg;
+        cls = 'warn';
+      }
+      $('decStatus').textContent = msg;
+      $('decStatus').className = cls;
+    } catch (e) {
+      $('decRaw').value = '';
+      $('decStatus').textContent = 'Error: ' + e.message;
+      $('decStatus').className = 'err';
+    }
+  }
+
+  // ---------- Mode switching ----------
+
+  function setMode(m) {
+    mode = m;
+    $('btnEncode').classList.toggle('active', m === 'encode');
+    $('btnDecode').classList.toggle('active', m === 'decode');
+    $('encMode').style.display = (m === 'encode') ? '' : 'none';
+    $('decMode').style.display = (m === 'decode') ? '' : 'none';
+    if (m === 'encode') updateEncode();
+    else updateDecode();
+  }
+
+  $('btnEncode').onclick = () => setMode('encode');
+  $('btnDecode').onclick = () => setMode('decode');
+  $('btnAddRow').onclick = () => { addKvRow(); updateEncode(); };
+  $('decIn').oninput = updateDecode;
+  secret.oninput = () => { if (mode === 'encode') updateEncode(); else updateDecode(); };
+
+  // ---------- Presets ----------
+
+  const presets = [
+    { secret: '12345', rows: [['foo', '123'], ['bar', 'X:Y'], ['yuk', 'Yabba+Yabba']] },
+    { secret: '12345', rows: [['hello', 'world']] },
+    { secret: '54321', rows: [['foo', ''], ['bar', 'baz']] },
+  ];
+
+  document.querySelectorAll('.examples button').forEach(b => {
+    b.onclick = () => {
+      const p = presets[+b.dataset.preset];
+      clearKvRows();
+      p.rows.forEach(r => addKvRow(r[0], r[1]));
+      secret.value = p.secret;
+      setMode('encode');
+    };
+  });
+
+  // ---------- Reference test ----------
+
+  const teststatus = $('teststatus');
+  let testRunning = false;
+
+  function toHex(s) {
+    const b = new TextEncoder().encode(s);
+    let h = '';
+    for (let i = 0; i < b.length; ++i)
+      h += b[i].toString(16).padStart(2, '0');
+    return h;
+  }
+
+  function runTestSuite() {
+    if (testRunning) return;
+    // Round-trip vectors: [secret, text, encode(text)]     -> decode(encode(text)) === text
+    // Decoder vectors:    [secret, decodeInput, decodeHex] -> toHex(decode(input)) === decodeHex
+    //   (invalid characters are skipped, intended behavior matching C)
+    const rt = window.basilikumRoundTripVectors;
+    const dv = window.basilikumDecodeVectors;
+    if (!rt || !dv) { teststatus.textContent = 'Error: vector files not loaded'; teststatus.className = 'err'; return; }
+    testRunning = true;
+    $('btnTest').disabled = true;
+    teststatus.className = '';
+    const total = rt.length + dv.length;
+    let i = 0, ok = 0, errCount = 0, rtOk = 0, dvOk = 0;
+    const fails = [];
+    const t0 = performance.now();
+    const CHUNK = 200;
+
+    function step() {
+      const end = Math.min(i + CHUNK, total);
+      for (; i < end; ++i) {
+        const isRt = i < rt.length;
+        let pass = false, err = null, detail = ' (mismatch)';
+        if (isRt) {
+          const row = rt[i];
+          let e = null, d = null;
+          try {
+            e = basilikum.encode(row[1], row[0]);
+            d = basilikum.decode(row[2], row[0]);
+            pass = e === row[2] && d === row[1];
+            detail = ' encode=' + JSON.stringify(e) + ' decode=' + JSON.stringify(d);
+          } catch (ex) { err = ex; detail = ': ' + ex.message; }
+        } else {
+          const row = dv[i - rt.length];
+          try {
+            const d = basilikum.decode(row[1], row[0]);
+            pass = toHex(d) === row[2];
+            detail = ' decode=' + JSON.stringify(d);
+          } catch (ex) { err = ex; detail = ': ' + ex.message; }
+        }
+        if (pass) {
+          ++ok;
+          if (isRt) ++rtOk; else ++dvOk;
+        } else {
+          if (fails.length < 10)
+            fails.push((isRt ? 'rt#' : 'dv#') + (isRt ? i : i - rt.length) + detail);
+          if (err) ++errCount;
+        }
+      }
+      teststatus.textContent = 'Progress: ' + i + ' / ' + total + ' (' + ok + ' OK)';
+      if (i < total) {
+        setTimeout(step, 0);
+      } else {
+        const ms = (performance.now() - t0).toFixed(0);
+        if (ok === total) {
+          teststatus.textContent = 'Result: ' + ok + ' / ' + total + ' vectors OK (round-trip ' + rtOk + '/' + rt.length + ', decoder ' + dvOk + '/' + dv.length + ') - ' + ms + ' ms, matches the C reference build.';
+          teststatus.className = 'ok';
+        } else {
+          teststatus.textContent = 'Result: ' + ok + ' / ' + total + ' OK (round-trip ' + rtOk + '/' + rt.length + ', decoder ' + dvOk + '/' + dv.length + '), ' + (total - ok) + ' deviations (' + errCount + ' exceptions), ' + ms + ' ms:\n' + fails.join('\n') + (total - ok > fails.length ? '\n...' : '');
+          teststatus.className = 'err';
+        }
+        $('btnTest').disabled = false;
+        testRunning = false;
+      }
+    }
+    step();
+  }
+
+  $('btnTest').onclick = runTestSuite;
+
+  // ---------- Init ----------
+
+  presets[0].rows.forEach(r => addKvRow(r[0], r[1]));
+  secret.value = presets[0].secret;
+  setMode('encode');
+})();
+</script>
+</body>
+</html>
